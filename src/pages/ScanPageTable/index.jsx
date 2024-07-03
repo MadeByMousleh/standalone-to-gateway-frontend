@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { IoLockClosed, IoLockOpen } from 'react-icons/io5';
 
+
 function filterValues(arr1, arr2) {
     // Convert arr2 to a Set for faster lookup
     const set2 = new Set(arr2);
@@ -48,6 +49,14 @@ export const ScanPageTable = () => {
 
                 // const signalStrengthChanged = Math.abs(updatedScanData[index].signalStrength - device.commonBleData.signalStrength) > SIGNAL_STRENGTH_THRESHOLD;
 
+                console.log(device.advertisementData)
+
+                if (device.advertisementData.mailFour !== '000000' && device.advertisementData.mailFour) {
+
+                    updatedScanData[index].lux = Number(`0x${device.advertisementData.mailFour}`);
+                    // updatedScanData[index].lux = device.advertisementData.mailFour;
+
+                }
 
                 if (isConnectedChanged) {
                     // Update the connection status and signal strength if they have changed
@@ -55,11 +64,13 @@ export const ScanPageTable = () => {
                     // updatedScanData[index].signalStrength = device.commonBleData.signalStrength;
 
                     // Sort the updated scan data by signal strength and return
-                    return updatedScanData;
                 }
 
+
+                return updatedScanData;
+
                 // If no significant changes, return the previous scan data
-                return prevScanData;
+                // return prevScanData;
             });
         }
 
@@ -103,8 +114,6 @@ export const ScanPageTable = () => {
         }
     }, []);
 
-
-
     useEffect(() => {
         const events = new EventSource(`http://localhost:8888/api/v1/next-gen/scan/?listenMode=${listenMode}`);
 
@@ -122,9 +131,6 @@ export const ScanPageTable = () => {
         };
     }, [addData, listenMode]);
 
-
-
-
     const connectOne = useCallback((macAddress) => {
 
         fetch(' http://localhost:8888/api/v1/next-gen/login', {
@@ -138,12 +144,9 @@ export const ScanPageTable = () => {
             .then(data => console.log(data));
     }, [])
 
-
-
     const delay = (delayInms) => {
         return new Promise(resolve => setTimeout(resolve, delayInms));
     };
-
 
     const connectMany = useCallback(async (macAddresses) => {
 
@@ -155,7 +158,6 @@ export const ScanPageTable = () => {
 
 
     }, [connectOne])
-
 
     const disconnectOne = useCallback((macAddress) => {
         fetch('http://localhost:8888/api/v1/next-gen/disconnect', {
@@ -169,7 +171,6 @@ export const ScanPageTable = () => {
             .then(data => console.log(data))
     }, [])
 
-
     const connect = (macAddresses) => {
 
         if (macAddresses.length === 1) {
@@ -182,7 +183,6 @@ export const ScanPageTable = () => {
 
     }
 
-
     function disconnectMany(macAddresses) {
 
         fetch('http://localhost:8888/disconnect-mobile/multiple', {
@@ -194,7 +194,6 @@ export const ScanPageTable = () => {
         })
     }
 
-
     const disconnect = (macAddresses) => {
 
         if (macAddresses.length === 1) {
@@ -204,7 +203,6 @@ export const ScanPageTable = () => {
         return disconnectMany(macAddresses)
 
     }
-
 
     const navigateToSettings = (mac, name) => {
         navigate(`/detector/${mac}/${name}`)
@@ -262,6 +260,14 @@ export const ScanPageTable = () => {
             key: 'signalStrength',
         },
 
+
+        {
+            title: 'Lux',
+            dataIndex: 'lux',
+            key: 'lux',
+        },
+
+
         {
             title: 'Action',
             key: 'action',
@@ -286,11 +292,9 @@ export const ScanPageTable = () => {
 
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
-
     const onSelectChange = (newSelectedRowKeys) => {
         setSelectedRowKeys(newSelectedRowKeys);
     };
-
 
     const rowSelection = {
         selectedRowKeys,
@@ -298,7 +302,6 @@ export const ScanPageTable = () => {
     };
 
     const hasSelected = selectedRowKeys.length > 0;
-
 
     return (
 
@@ -332,7 +335,7 @@ export const ScanPageTable = () => {
                     </span>
 
                     <div style={{ alignItems: 'end', width: '100%', justifyItems: 'end', display: 'flex', flexDirection: 'row', justifyContent: 'end' }}>
-                        <div style={{alignSelf: 'end', justifyContent: 'end'}}>
+                        <div style={{ alignSelf: 'end', justifyContent: 'end' }}>
                             <p>Scan mode</p>
                             <Switch checked={listenMode} onChange={() => setListenMode((prevValue) => prevValue ? 0 : 1)}>
                             </Switch>
