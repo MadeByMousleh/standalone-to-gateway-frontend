@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useCallback, useEffect, useState, } from "react";
-import { Button, Card, Space, Table, Tag } from "antd";
+import { Button, Card, Space, Switch, Table, Tag } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { IoLockClosed, IoLockOpen } from 'react-icons/io5';
@@ -21,17 +21,14 @@ export const ScanPageTable = () => {
 
     const [scanData, setScanData] = useState([]);
 
+    const [listenMode, setListenMode] = useState(1);
+
 
     const addData = useCallback((event) => {
         const device = JSON.parse(event.data);
-    
-        // Debug log for a specific device based on its BLE address
-        if (device.commonBleData.bleAddress === "10:B9:F7:0F:9B:87") {
-            console.log(device);
-        }
-    
+
         const SIGNAL_STRENGTH_THRESHOLD = 15; // Define a threshold for significant signal strength change
-    
+
         // Handle advertisement data
 
         if (device.advertisementData) {
@@ -39,57 +36,58 @@ export const ScanPageTable = () => {
             setScanData((prevScanData) => {
                 // Find the index of the device if it already exists in the scan data
                 const index = prevScanData.findIndex((d) => d.macAddress === device.commonBleData.bleAddress);
-    
+
                 // If the device does not exist, return the previous scan data
                 if (index === -1) return prevScanData;
-    
+
                 // Clone the previous scan data to avoid direct state mutation
                 const updatedScanData = [...prevScanData];
-    
+
                 // Determine if the connection status or signal strength has changed significantly
                 const isConnectedChanged = updatedScanData[index].isConnected !== (device.commonBleData.eventType === 2);
 
                 // const signalStrengthChanged = Math.abs(updatedScanData[index].signalStrength - device.commonBleData.signalStrength) > SIGNAL_STRENGTH_THRESHOLD;
-    
+
 
                 if (isConnectedChanged) {
                     // Update the connection status and signal strength if they have changed
                     updatedScanData[index].isConnected = device.commonBleData.eventType === 2;
                     // updatedScanData[index].signalStrength = device.commonBleData.signalStrength;
-    
+
                     // Sort the updated scan data by signal strength and return
                     return updatedScanData;
                 }
-    
+
                 // If no significant changes, return the previous scan data
                 return prevScanData;
             });
         }
-    
+
         // Handle scan data
         if (device.scanData) {
             // Assign key and signal strength from commonBleData
             device.scanData.key = device.scanData.macAddress;
 
             device.scanData.signalStrength = device.commonBleData.signalStrength;
-    
+
             setScanData((prevScanData) => {
+
                 // Find the index of the device if it already exists in the scan data
                 const index = prevScanData.findIndex((d) => d.macAddress === device.scanData.macAddress);
-    
+
                 // Clone the previous scan data to avoid direct state mutation
                 const updatedScanData = [...prevScanData];
-    
+
                 if (index !== -1) {
                     // If the device exists, determine if the connection status or signal strength has changed significantly
                     const oldIsConnected = updatedScanData[index]?.isConnected;
 
                     const signalStrengthChanged = Math.abs(updatedScanData[index].signalStrength - device.scanData.signalStrength) > SIGNAL_STRENGTH_THRESHOLD;
-    
+
                     if (signalStrengthChanged) {
                         // Update the device data and retain the old connection status
                         updatedScanData[index] = { ...device.scanData, isConnected: oldIsConnected };
-    
+
                         // Sort the updated scan data by signal strength and return
                         return updatedScanData.sort((a, b) => b.signalStrength - a.signalStrength);
                     }
@@ -98,17 +96,17 @@ export const ScanPageTable = () => {
                     updatedScanData.push(device.scanData);
                     return updatedScanData.sort((a, b) => b.signalStrength - a.signalStrength);
                 }
-    
+
                 // If no significant changes, return the previous scan data
                 return prevScanData;
             });
         }
     }, []);
-    
-    
+
+
 
     useEffect(() => {
-        const events = new EventSource(' http://localhost:8888/api/v1/next-gen/scan');
+        const events = new EventSource(`http://localhost:8888/api/v1/next-gen/scan/?listenMode=${listenMode}`);
 
         events.addEventListener('message', addData);
 
@@ -122,21 +120,22 @@ export const ScanPageTable = () => {
             events.close();
             console.log("CLOSING DOWN - EVENT SOURCE CLOSED FROM CLIENT");
         };
-    }, []);
+    }, [addData, listenMode]);
 
 
 
 
     const connectOne = useCallback((macAddress) => {
 
-        fetch('http://localhost:8888/connect-mobile', {
+        fetch(' http://localhost:8888/api/v1/next-gen/login', {
             method: 'POST',
-            body: JSON.stringify({ mac: macAddress }),
+            body: JSON.stringify({ macAddress }),
             headers: {
                 'Content-type': 'application/json',
             }
         })
             .then(res => res.json())
+            .then(data => console.log(data));
     }, [])
 
 
@@ -159,19 +158,19 @@ export const ScanPageTable = () => {
 
 
     const disconnectOne = useCallback((macAddress) => {
-        fetch('http://localhost:8888/disconnect-mobile', {
+        fetch('http://localhost:8888/api/v1/next-gen/disconnect', {
             method: 'POST',
-            body: JSON.stringify({ mac: macAddress }),
+            body: JSON.stringify({ macAddress }),
             headers: {
                 'Content-type': 'application/json'
             }
         })
             .then(res => res.json())
+            .then(data => console.log(data))
     }, [])
 
 
     const connect = (macAddresses) => {
-        console.log(macAddresses, "*****'")
 
         if (macAddresses.length === 1) {
 
@@ -248,12 +247,11 @@ export const ScanPageTable = () => {
             dataIndex: 'isConnected',
             key: 'isConnected',
             render: (_, record) => {
-                if(record.isConnected)
-                    {
-                        return <Tag color="#03c9a9">Connected</Tag> 
-                    }
+                if (record.isConnected) {
+                    return <Tag color="#03c9a9">Connected</Tag>
+                }
 
-                    return <Tag color="#f64747">Not connected</Tag>;
+                return <Tag color="#f64747">Not connected</Tag>;
             }
         },
 
@@ -332,6 +330,14 @@ export const ScanPageTable = () => {
                         {hasSelected ? `Selected ${selectedRowKeys.length} items` : ''}
 
                     </span>
+
+                    <div style={{ alignItems: 'end', width: '100%', justifyItems: 'end', display: 'flex', flexDirection: 'row', justifyContent: 'end' }}>
+                        <div style={{alignSelf: 'end', justifyContent: 'end'}}>
+                            <p>Scan mode</p>
+                            <Switch checked={listenMode} onChange={() => setListenMode((prevValue) => prevValue ? 0 : 1)}>
+                            </Switch>
+                        </div>
+                    </div>
                 </div>
                 <Table rowSelection={rowSelection} columns={columns} pagination={true} dataSource={scanData} />
             </div>
