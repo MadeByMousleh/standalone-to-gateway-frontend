@@ -1,9 +1,9 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useCallback, useEffect, useState, } from "react";
-import { Button, Card, Space, Switch, Table, Tag } from "antd";
+import { Button, Card, Dropdown, Space, Switch, Table, Tag } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { IoLockClosed, IoLockOpen } from 'react-icons/io5';
+import { IoArrowDownOutline, IoLockClosed, IoLockOpen } from 'react-icons/io5';
 
 
 function filterValues(arr1, arr2) {
@@ -49,12 +49,10 @@ export const ScanPageTable = () => {
 
                 // const signalStrengthChanged = Math.abs(updatedScanData[index].signalStrength - device.commonBleData.signalStrength) > SIGNAL_STRENGTH_THRESHOLD;
 
-                console.log(device.advertisementData)
-
                 if (device.advertisementData.mailFour !== '000000' && device.advertisementData.mailFour) {
 
-                    updatedScanData[index].lux = Number(`0x${device.advertisementData.mailFour}`);
-                    // updatedScanData[index].lux = device.advertisementData.mailFour;
+                    // updatedScanData[index].lux = Number(`0x${device.advertisementData.mailFour}`);
+                    updatedScanData[index].lux = device.advertisementData.mailFour;
 
                 }
 
@@ -212,6 +210,134 @@ export const ScanPageTable = () => {
         navigate(`/detector/monitor/${mac}/${name}`)
     }
 
+
+
+    // const items = [
+    //     {
+    //         key: '1',
+    //         label: 'Action 1',
+    //     },
+    //     {
+    //         key: '2',
+    //         label: 'Action 2',
+    //     },
+    // ];
+
+    let P48Firmware = [
+        {
+            key: "0",
+            label: "0209"
+        },
+        {
+            key: "1",
+            label: "0211"
+        },
+        {
+            key: "2",
+            label: "0212"
+        },
+        {
+            key: "3",
+            label: "0214"
+        },
+        {
+            key: "4",
+            label: "0215"
+        },
+        {
+            key: "5",
+            label: "0217"
+        },
+        {
+            key: "6",
+            label: "0218"
+        },
+        {
+            key: "7",
+            label: "0219"
+        },
+        {
+            key: "8",
+            label: "0221"
+        },
+        {
+            key: "9",
+            label: "0224"
+        }
+    ]
+
+    let P47Firmware = [
+        {
+            key: "0",
+            label: "0209"
+        },
+        {
+            key: "1",
+            label: "0211"
+        },
+        {
+            key: "2",
+            label: "0212"
+        },
+        {
+            key: "3",
+            label: "0214"
+        },
+        {
+            key: "4",
+            label: "0215"
+        },
+        {
+            key: "5",
+            label: "0217"
+        },
+        {
+            key: "6",
+            label: "0218"
+        },
+        {
+            key: "7",
+            label: "0219"
+        },
+        {
+            key: "8",
+            label: "0221"
+        },
+        {
+            key: "9",
+            label: "0224"
+        }
+    ]
+
+    let P46Firmware = [
+        {
+            key: "0",
+            label: "0205"
+        },
+        {
+            key: "1",
+            label: "0216"
+        },
+        {
+            key: "2",
+            label: "0220"
+        },
+        {
+            key: "3",
+            label: "0225"
+        }
+    ]
+
+    const onClick = ({ item, key, keyPath, domEvent }) => {
+        console.profile(item);
+    };
+
+    const onChange = (e) => {
+
+        console.log(e);
+
+    }
+
     const columns = [
 
         {
@@ -228,6 +354,11 @@ export const ScanPageTable = () => {
             title: 'Name',
             dataIndex: 'name',
             key: 'name',
+        },
+        {
+            title: 'Short name',
+            dataIndex: 'shortname',
+            key: 'shortname',
         },
         {
             title: 'Product number',
@@ -253,7 +384,6 @@ export const ScanPageTable = () => {
             }
         },
 
-
         {
             title: 'Signal strength',
             dataIndex: 'signalStrength',
@@ -274,12 +404,23 @@ export const ScanPageTable = () => {
             render: (_, record) => {
 
                 if (record) {
+
+                    let items = record.firmwaresAvailable;;
+
+
+
                     return (
 
                         <Space size="middle">
                             <a onClick={() => navigateToSettings(record.macAddress, record.productNumber)}>Settings</a>
                             <a onClick={() => navigateToMonitor(record.macAddress, record.productNumber)}>Monitor</a>
                             <a onClick={() => disconnectOne(record.macAddress)}>Disconnect</a>
+
+                            <Dropdown menu={{ items, onClick }}>
+                                <a>
+                                    Upgrade
+                                </a>
+                            </Dropdown>
 
                         </Space>)
 
@@ -288,6 +429,8 @@ export const ScanPageTable = () => {
 
             }
         },
+
+
     ];
 
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
