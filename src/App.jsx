@@ -27,6 +27,7 @@ import ToolsPage from './pages/DetectorPage/ToolsPage';
 import FirmwareUpgrade from './pages/DetectorPage/ToolsPage/FirmwareUpgradePage';
 import PirDetection from './pages/DetectorPage/ToolsPage/PirDetection';
 import MonitorPage from './pages/MonitorPage';
+import ChartPages from './pages/ChartsPages/index';
 
 const router = createBrowserRouter([
   {
@@ -35,7 +36,12 @@ const router = createBrowserRouter([
       element: <ScanPageTable />
     },
   
-
+    {
+    
+      path: "/charts",
+      element: <ChartPages />
+    },
+  
 
   {
     path: '/detector/:mac/:productNumber/functions/master-secondary',
