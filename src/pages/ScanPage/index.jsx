@@ -249,6 +249,8 @@ const ScanPage = () => {
 
         productNumberArr.splice(20, productNumberArr.length - 1);
         productNumberArr = productNumberArr.join("");
+
+        console.log(productNumberArr)
         newDevice.productNumber = newDevice.getProductFromNumber(hex2a(productNumberArr));
       }
 

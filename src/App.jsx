@@ -28,6 +28,7 @@ import FirmwareUpgrade from './pages/DetectorPage/ToolsPage/FirmwareUpgradePage'
 import PirDetection from './pages/DetectorPage/ToolsPage/PirDetection';
 import MonitorPage from './pages/MonitorPage';
 import ChartPages from './pages/ChartsPages/index';
+import LuminariesPage from './pages/LuminariesPage';
 
 const router = createBrowserRouter([
   {
@@ -114,6 +115,13 @@ const router = createBrowserRouter([
     path: '/detector/:mac/:productNumber/buttons/',
     element: <ButtonsTab />,
   },
+
+  
+  {
+    path: '/detector/:mac/:productNumber/luminaries/',
+    element: <LuminariesPage />,
+  },
+
 
   {
     path: '/detector/monitor/:mac/:productNumber',

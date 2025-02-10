@@ -70,10 +70,7 @@ class BLEDeviceV2 {
         this.isBoot = isBoot;
         this.isLightOn = 0;
 
-        if(this.key ===  '10:B9:F7:0F:6C:BA')
-            {
-                console.log(eventType)
-            }
+      
     }
 
     handleScanData(scanData) {
@@ -124,7 +121,9 @@ class BLEDeviceV2 {
         this.isLocked = isLocked;
     }
 
-    handleConnectionState(eventType, connectedDevices) {
+    handleConnectionState(eventType, connectedDevices, mac) {
+
+        console.log(connectedDevices)
         // Ignore event type 4 as it does not require any action
         if (eventType === 4) return;
 
@@ -133,6 +132,12 @@ class BLEDeviceV2 {
             this.connectionState = connectionStates.CONNECTED;
         }
 
+        if (eventType === 2 && !(connectedDevices.find(d => d.macAddress === mac) !== -1)) {
+            this.connectionState = connectionStates.BUSY;
+        }
+
+
+        
         // Handle event type 0 which indicates a disconnection
         else if (eventType === 0) {
             this.connectionState = connectionStates.DISCONNECTED;
@@ -141,10 +146,7 @@ class BLEDeviceV2 {
 
     handleAdvertisementData(adData) {
 
-        if(this.key ===  '10:B9:F7:0F:6C:BA')
-            {
-                console.log(adData)
-            }
+      
 
         if (!((this.isMovementRegistered === adData.tw) === "08")) {
             this.isMovementRegistered = adData.tw === "08";
@@ -238,7 +240,6 @@ export const ScanPageTable = () => {
 
     const onTreeChange = (newValue) => {
 
-        console.log('onChange ', newValue[0]);
 
         if(newValue.length === 0) {
             
@@ -246,7 +247,6 @@ export const ScanPageTable = () => {
 
                 prev.map(d => {
     
-                    console.log(d.title)
     
                     return {
                         ...d,
@@ -274,7 +274,6 @@ export const ScanPageTable = () => {
 
             prev.map(d => {
 
-                console.log(d.title)
 
                 return {
                     ...d,
@@ -344,6 +343,7 @@ export const ScanPageTable = () => {
 
             const device = JSON.parse(event.data);
 
+
             let macAddress = device.commonBleData.bleAddress;
             let eventType = device.commonBleData.eventType;
             let signalStrength = device.commonBleData.signalStrength;
@@ -357,9 +357,7 @@ export const ScanPageTable = () => {
 
                 if (index !== -1) {
 
-                    currentBleDevices[index].handleConnectionState(
-                        eventType
-                    );
+                    currentBleDevices[index].handleConnectionState(eventType, connectedDevices);
 
                     if (!currentDevice.scanData && device.scanData) {
 
@@ -388,7 +386,6 @@ export const ScanPageTable = () => {
 
                 if (device.scanData) bleDevice.handleScanData(device.scanData);
 
-                console.log(device.advertisementData)
                 if (device.advertisementData)
                     bleDevice.handleAdvertisementData(device.advertisementData);
 
@@ -399,6 +396,8 @@ export const ScanPageTable = () => {
     );
 
     const handleConnectionData = useCallback((event) => {
+
+        console.log(event)
 
         const data = JSON.parse(event.data);
 
@@ -463,16 +462,13 @@ export const ScanPageTable = () => {
         return () => {
             events.removeEventListener("message", addData);
             events.close();
-            console.log("CLOSING DOWN AD AND SCAN STREAM");
         };
     }, [listenMode]);
 
 
     useEffect(() => {
 
-        const connectionEvents = new EventSource(
-            `http://localhost:8888/api/v1/next-gen/sse/connection-status`
-        );
+        const connectionEvents = new EventSource(`http://localhost:8888/api/v1/next-gen/sse/connection-status`);
 
         connectionEvents.addEventListener("message", handleConnectionData);
 
@@ -484,28 +480,27 @@ export const ScanPageTable = () => {
         return () => {
             connectionEvents.removeEventListener("message", handleConnectionData);
             connectionEvents.close();
-            console.log("CLOSING DOWN CONNECTION SSE ");
         };
     }, [handleConnectionData]);
 
 
     const getConnectionList = useCallback(async () => {
         const connectionList = await fetch(`http://localhost:8888/api/v1/next-gen/connection-list`);
-
+        
         const { data } = await connectionList.json();
+    
 
-        if (!data.nodes) return;
+        if (data?.nodes.length > 0) {
+            
+            // setBleDevices((prev) => {
+            //     return prev.map((d) => {
+            //         if (d.macAddress === d.bdaddrs?.bdaddr) {
+            //             d.connectionState = connectionStates.CONNECTED;
+            //         }
 
-        if (data.nodes.length > 0) {
-            setBleDevices((prev) => {
-                return prev.map((d) => {
-                    if (d.macAddress === d.bdaddrs?.bdaddr) {
-                        d.connectionState = connectionStates.CONNECTED;
-                    }
-
-                    return d;
-                });
-            });
+            //         return d;
+            //     });
+            // });
 
             setConnectedDevice(
                 data.nodes.map((d) => {
@@ -516,10 +511,13 @@ export const ScanPageTable = () => {
     }, []);
 
 
-
     useEffect(() => {
         getConnectionList();
-    }, [getConnectionList]);
+    }, [])
+
+    useEffect(() => {
+        console.log(connectedDevices, 'ConnectedDevices')
+    }, [connectedDevices]);
 
     const connectOne = useCallback((macAddress) => {
         fetch(" http://localhost:8888/api/v1/next-gen/login", {
@@ -706,7 +704,6 @@ export const ScanPageTable = () => {
 
         setSelectedRowKeys(newSelectedRowKeys);
 
-        console.log(newSelectedRowKeys)
 
         if (newSelectedRowKeys.length === 0) {
             setFirmwareOptions([])
@@ -759,7 +756,6 @@ export const ScanPageTable = () => {
     const hasSelected = selectedRowKeys.length > 0;
 
     const onChange = (pagination, filters, sorter, extra) => {
-        console.log('params', pagination, filters, sorter, extra);
     };
 
 
@@ -815,7 +811,6 @@ export const ScanPageTable = () => {
         return () => {
             upgradeEvents.removeEventListener("message", handleUpgradeStatus);
             upgradeEvents.close();
-            console.log("CLOSING DOWN CONNECTION SSE ");
         };
     }, [handleUpgradeStatus]);
 
