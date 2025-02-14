@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { LuminariesCardContainer } from './styled'
 import { useParams } from 'react-router-dom'
 import { FaPowerOff } from "react-icons/fa";
+import { IoBulbOutline, IoBulbSharp } from 'react-icons/io5';
 
 export default function LuminariesPage() {
 
@@ -17,7 +18,7 @@ export default function LuminariesPage() {
       key: 0,
       render: (powerOn) =>
         <>
-          {powerOn ? <Tag color="green">On</Tag> : <Tag color="red">Off</Tag>}
+          {powerOn ?  <IoBulbSharp color="#f5f106" size={25} /> : <IoBulbOutline color="#bdbdbd" size={25} />}
         </>
     },
     {
@@ -54,7 +55,15 @@ export default function LuminariesPage() {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          <a onClick={() => turnOFFLuminary(record.shortAddress)}> <FaPowerOff /> </a>
+          <a onClick={() => {
+            if(record.powerOn)
+            {
+              turnOFFLuminary(record.shortAddress)
+            }
+            else {
+              turnOnLuminary(record.shortAddress)
+            }
+          }}> <FaPowerOff /> </a>
           <a>Identify</a>
         </Space>
       ),
@@ -62,37 +71,79 @@ export default function LuminariesPage() {
   ];
 
 
-  const turnOFFLuminary = (shortAddress) => {
+  const turnOFFLuminary = async (shortAddress) => {
 
-    fetch(`http://localhost:8888/api/v1/next-gen/controls/mac/${mac}`, {
+    let response = await fetch(`http://localhost:8888/api/v1/next-gen/controls/mac/${mac}`, {
       method: 'POST',
       body: JSON.stringify({
         shortAddress: shortAddress.toString().padStart(2, "0"),
       }),
       headers: { 'Content-type': 'application/json' }
-    }).then(res => {
-      if (res.status === "success") {
-        setData(prev => {
-
-          const copy = [...prev];
-
-          const shortAddress = +prev.shortAddress;
-
-          const exists = copy.findIndex(p => p.shortAddress === shortAddress);
-
-          console.log(exists, '"#################')
-
-          if (exists !== -1) {
-            copy[exists].powerOn = false;
-            return [...copy]
-          }
-
-          return [...prev];
-        })
-
-      }
-
     })
+
+    let answer = await response.json();
+
+    console.log(answer);
+
+    if (answer.status === "success") {
+
+      setData(prev => {
+
+        const copy = [...prev];
+
+        const shortAddress = +answer.shortAddress;
+
+        const exists = copy.findIndex(p => p.shortAddress === shortAddress);
+
+        console.log(exists, '"#################')
+
+        if (exists !== -1) {
+          copy[exists].powerOn = false;
+          return [...copy]
+        }
+
+        return [...prev];
+      })
+
+    }
+
+  }
+
+  const turnOnLuminary = async (shortAddress) => {
+
+    let response = await fetch(`http://localhost:8888/api/v1/next-gen/controls/mac/${mac}/on`, {
+      method: 'POST',
+      body: JSON.stringify({
+        shortAddress: shortAddress.toString().padStart(2, "0"),
+      }),
+      headers: { 'Content-type': 'application/json' }
+    })
+
+    let answer = await response.json();
+
+    console.log(answer);
+
+    if (answer.status === "success") {
+
+      setData(prev => {
+
+        const copy = [...prev];
+
+        const shortAddress = +answer.shortAddress;
+
+        const exists = copy.findIndex(p => p.shortAddress === shortAddress);
+
+        console.log(exists, '"#################')
+
+        if (exists !== -1) {
+          copy[exists].powerOn = true;
+          return [...copy]
+        }
+
+        return [...prev];
+      })
+
+    }
 
   }
 
@@ -101,13 +152,7 @@ export default function LuminariesPage() {
     const fetchLuminaries = async () => {
       const response = await fetch(`http://localhost:8888/api/v1/next-gen/info/mac/${mac}/luminaries/info`)
       const responseData = await response.json()
-
-
-
-
       setData(responseData);
-
-
     }
     fetchLuminaries();
   }, []);
