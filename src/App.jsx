@@ -29,6 +29,7 @@ import PirDetection from './pages/DetectorPage/ToolsPage/PirDetection';
 import MonitorPage from './pages/MonitorPage';
 import ChartPages from './pages/ChartsPages/index';
 import LuminariesPage from './pages/LuminariesPage';
+import DetectorPcPage from './pages/DetectorPcPage/index.js';
 
 const router = createBrowserRouter([
   {
@@ -122,11 +123,17 @@ const router = createBrowserRouter([
     element: <LuminariesPage />,
   },
 
+  {
+    path: '/detector/:mac/:productNumber/dali-bus',
+    element: <DetectorPcPage />,
+  },
 
   {
     path: '/detector/monitor/:mac/:productNumber',
     element: <MonitorPage />,
   },
+
+
 
 
   {

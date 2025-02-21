@@ -550,6 +550,11 @@ export const ScanPageTable = () => {
         });
     }, []);
 
+    const goToMoreInfo = (mac, name) => {
+        navigate(`/detector/${mac}/${name}/dali-bus`);
+
+    }
+
     const connect = (macAddresses) => {
         if (macAddresses.length === 1) {
             return connectOne(macAddresses[0]);
@@ -1114,6 +1119,9 @@ export const ScanPageTable = () => {
                                 Monitor
                             </a> */}
                             <a onClick={() => disconnectOne(record.macAddress)}>Disconnect</a>
+
+                            <a onClick={() => goToMoreInfo(record.macAddress, record.name)}>DALI-BUS</a>
+
 
                         </Space>
                     );
