@@ -175,13 +175,13 @@ class BLEDeviceV2 {
 
 const categorizeRSSI = (rssi) => {
     if (rssi >= -60) {
-        return "Excellent";
+        return "Strong";
     } else if (rssi >= -70) {
-        return "Good";
+        return "Moderate";
     } else if (rssi >= -90) {
-        return "Fair";
+        return "Moderate";
     } else {
-        return "Poor";
+        return "Weak";
     }
 };
 
@@ -311,7 +311,7 @@ export const ScanPageTable = () => {
             const now = Date.now();
 
             const mappedData = prevData.map((d) => {
-                if (!Math.abs(now - d.lastSeen <= 3000)) {
+                if (!Math.abs(now - d.lastSeen <= 20000)) {
                     d.connectionState = connectionStates.TIMEOUT;
                     setSelectedRowKeys(prev => prev.filter(d => d !== d.macAddress));
                     d.timer = 30;
@@ -1037,17 +1037,14 @@ export const ScanPageTable = () => {
                     <>
                         <div style={{ display: "flex", flexDirection: "row" }}>
                             <div>
-                                {rssiStrength === "Excellent" && (
-                                    <Tag color="#03c9a9">{rssiStrength}</Tag>
+                                {rssiStrength === "Strong" && (
+                                    <Tag color="#03c9a9">{rssiStrength} - {record.signalStrength}</Tag>
                                 )}
-                                {rssiStrength === "Good" && (
-                                    <Tag color="#474af6">{rssiStrength}</Tag>
+                                {rssiStrength === "Moderate" && (
+                                    <Tag color="#474af6">{rssiStrength} - {record.signalStrength}</Tag>
                                 )}
-                                {rssiStrength === "Fair" && (
-                                    <Tag color="#ffb326">{rssiStrength}</Tag>
-                                )}
-                                {rssiStrength === "Poor" && (
-                                    <Tag color="#f64747">{rssiStrength}</Tag>
+                                {rssiStrength === "Weak" && (
+                                    <Tag color="#f64747">{rssiStrength} - {record.signalStrength}</Tag>
                                 )}
                             </div>
                         </div>
