@@ -44,6 +44,31 @@ const { SHOW_PARENT } = TreeSelect;
 //     return result.join('');
 // }
 
+
+
+const categorizeRSSI = (rssi) => {
+    if (rssi >= -60) {
+        return "Strong";
+    } else if (rssi >= -70) {
+        return "Moderate";
+    } else if (rssi >= -90) {
+        return "Moderate";
+    } else {
+        return "Weak";
+    }
+};
+
+
+const changeEndianness = (string) => {
+    const result = [];
+    let len = string.length - 2;
+    while (len >= 0) {
+        result.push(string.substr(len, 2));
+        len -= 2;
+    }
+    return result.join('');
+}
+
 class BLEDeviceV2 {
     constructor(
         macAddress,
@@ -70,7 +95,7 @@ class BLEDeviceV2 {
         this.isBoot = isBoot;
         this.isLightOn = 0;
 
-      
+
     }
 
     handleScanData(scanData) {
@@ -122,31 +147,26 @@ class BLEDeviceV2 {
     }
 
     handleConnectionState(eventType, connectedDevices, mac) {
-
-        console.log(connectedDevices)
-        // Ignore event type 4 as it does not require any action
         if (eventType === 4) return;
-
-        // Handle event type 2 which indicates a possible connection or busy state
+    
+    
+        console.log(connectedDevices, mac);
+    
         if (eventType === 2) {
+            if (connectedDevices.length === 0) {
+                this.connectionState = connectionStates.BUSY;
+                return;
+            }
             this.connectionState = connectionStates.CONNECTED;
+            return;
         }
-
-        if (eventType === 2 && !(connectedDevices.find(d => d.macAddress === mac) !== -1)) {
-            this.connectionState = connectionStates.BUSY;
-        }
-
-
-        
-        // Handle event type 0 which indicates a disconnection
-        else if (eventType === 0) {
+    
+        if (eventType === 0) {
             this.connectionState = connectionStates.DISCONNECTED;
         }
     }
-
     handleAdvertisementData(adData) {
 
-      
 
         if (!((this.isMovementRegistered === adData.tw) === "08")) {
             this.isMovementRegistered = adData.tw === "08";
@@ -155,45 +175,20 @@ class BLEDeviceV2 {
 
         if (adData.mailFour !== "000000" && adData.mailFour) {
 
-            if (this.currentLux !== Number("0x" + changeEndianness(adData.mailFour.slice(2, 6)))) {
+            if (this.currentLux !== Number("0x" + adData.mailFour.slice(2, 6))) {
 
-
-                this.currentLux = Number("0x" + changeEndianness(adData.mailFour.slice(2, 6)))
+                this.currentLux = Number("0x" + adData.mailFour.slice(2, 6))
             }
-
 
             this.isLightOn = adData.mailFour.slice(0, 2);
 
-            if(this.evenType === 2) 
-                {
-                    this.connectionState = connectionStates.CONNECTED;
-                }
+            // if (this.evenType === 2) {
+
+            //     this.connectionState = connectionStates.CONNECTED;
+            // }
 
         }
     }
-}
-
-const categorizeRSSI = (rssi) => {
-    if (rssi >= -60) {
-        return "Strong";
-    } else if (rssi >= -70) {
-        return "Moderate";
-    } else if (rssi >= -90) {
-        return "Moderate";
-    } else {
-        return "Weak";
-    }
-};
-
-
-const changeEndianness = (string) => {
-    const result = [];
-    let len = string.length - 2;
-    while (len >= 0) {
-      result.push(string.substr(len, 2));
-      len -= 2;
-    }
-    return result.join('');
 }
 
 export const ScanPageTable = () => {
@@ -206,7 +201,6 @@ export const ScanPageTable = () => {
 
     const [bleDevices, setBleDevices] = useState([]);
 
-    const [connectedDevices, setConnectedDevice] = useState([]);
 
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
@@ -226,6 +220,12 @@ export const ScanPageTable = () => {
 
     const searchInput = useRef(null);
 
+    const connectedDevicesRef = useRef([]);
+
+
+
+
+
 
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();
@@ -241,21 +241,21 @@ export const ScanPageTable = () => {
     const onTreeChange = (newValue) => {
 
 
-        if(newValue.length === 0) {
-            
+        if (newValue.length === 0) {
+
             setFirmwareOptions(prev =>
 
                 prev.map(d => {
-    
-    
+
+
                     return {
                         ...d,
                         disabled: false
-    
+
                     }
                 })
             )
-            return   setSelectedFirmware(newValue);
+            return setSelectedFirmware(newValue);
         };
 
         let version = null;
@@ -267,7 +267,7 @@ export const ScanPageTable = () => {
 
             let arr = newValue[0].split('.');
 
-            version =  arr[0].slice(arr[0].length -4, arr[0].length)
+            version = arr[0].slice(arr[0].length - 4, arr[0].length)
         }
 
         setFirmwareOptions(prev =>
@@ -305,6 +305,9 @@ export const ScanPageTable = () => {
     const delay = (delayInms) => {
         return new Promise((resolve) => setTimeout(resolve, delayInms));
     };
+
+
+
 
     const updateBleDevices = useCallback(() => {
         setBleDevices((prevData) => {
@@ -344,20 +347,26 @@ export const ScanPageTable = () => {
             const device = JSON.parse(event.data);
 
 
+
             let macAddress = device.commonBleData.bleAddress;
             let eventType = device.commonBleData.eventType;
             let signalStrength = device.commonBleData.signalStrength;
 
             setBleDevices((currentBleDevices) => {
+
                 const index = currentBleDevices.findIndex(
                     (d) => d.macAddress === macAddress
                 );
 
+
+
                 const currentDevice = currentBleDevices[index];
+
 
                 if (index !== -1) {
 
-                    currentBleDevices[index].handleConnectionState(eventType, connectedDevices);
+                    
+                    currentBleDevices[index].handleConnectionState(eventType, connectedDevicesRef.current, macAddress);
 
                     if (!currentDevice.scanData && device.scanData) {
 
@@ -365,6 +374,7 @@ export const ScanPageTable = () => {
                     }
 
                     if (device.advertisementData) {
+
 
                         currentBleDevices[index].handleAdvertisementData(
 
@@ -392,59 +402,56 @@ export const ScanPageTable = () => {
                 return [...currentBleDevices, bleDevice];
             });
         },
-        [connectedDevices]
+        []
     );
 
+    useEffect(() => {
+        console.log(connectedDevicesRef.current, 'useEffect');
+    })
+
     const handleConnectionData = useCallback((event) => {
-
-        console.log(event)
-
-        const data = JSON.parse(event.data);
-
-        setConnectedDevice((prev) => {
-            const exists = prev.findIndex((d) => d.macAddress === data.handle);
-
-            setBleDevices((prevDevices) => {
-                const devices = [...prevDevices];
-
-                const index = devices.findIndex(
-                    (device) => device.macAddress === data.handle
-                );
-
-                if (index !== -1) {
-                    if (data.connectionState === "connected") {
-                        data.reason = "Host connected";
-
-                        devices[index].connectionState = connectionStates.CONNECTED;
-                    }
-
-                    if (data.connectionState === "disconnected") {
-                        data.reason = "Host disconnected";
-
-                        devices[index].connectionState = connectionStates.DISCONNECTED;
-                    }
-
-                    if (data.connectionState === "failure") {
-                        data.reason = "Client disconnected";
-
-                        devices[index].connectionState = connectionStates.DISCONNECTED;
-                    }
-
-                    // devices[exists].reason = data.reason;
+        try {
+            const data = JSON.parse(event.data);
+            console.log(data);
+    
+            const index = connectedDevicesRef.current.findIndex(
+                (d) => d.handle === data.handle
+            );
+    
+            if (data.connectionState === "connected") {
+                if (index === -1) {
+                    connectedDevicesRef.current = [...connectedDevicesRef.current, data]; // Directly update ref
                 }
-                return devices;
-            });
-
-            if (exists !== -1) {
-                prev[exists].connectionState = data.connectionState;
-                prev[exists].reason = data.connectionState;
-
-                return [...prev];
+            } else if (data.connectionState === "disconnected") {
+                connectedDevicesRef.current = connectedDevicesRef.current.filter(
+                    (device) => device.handle !== data.handle
+                );
             }
-
-            return [...prev, { data, macAddress: data.handle }];
-        });
+    
+            console.log("Updated connected devices:", connectedDevicesRef.current);
+        } catch (error) {
+            console.error("Error parsing event data:", error);
+        }
     }, []);
+    
+    
+    useEffect(() => {
+        const connectionEvents = new EventSource("http://localhost:8888/api/v1/next-gen/sse/connection-status");
+    
+        connectionEvents.addEventListener("message", handleConnectionData);
+    
+        connectionEvents.onerror = () => {
+            console.error("Connection error occurred.");
+            connectionEvents.removeEventListener("message", handleConnectionData);
+            connectionEvents.close();
+        };
+    
+        return () => {
+            connectionEvents.removeEventListener("message", handleConnectionData);
+            connectionEvents.close();
+        };
+    }, [handleConnectionData]);
+    
 
 
     useEffect(() => {
@@ -466,32 +473,14 @@ export const ScanPageTable = () => {
     }, [listenMode]);
 
 
-    useEffect(() => {
-
-        const connectionEvents = new EventSource(`http://localhost:8888/api/v1/next-gen/sse/connection-status`);
-
-        connectionEvents.addEventListener("message", handleConnectionData);
-
-        connectionEvents.onerror = () => {
-            connectionEvents.removeEventListener("message", handleConnectionData);
-            connectionEvents.close();
-        };
-
-        return () => {
-            connectionEvents.removeEventListener("message", handleConnectionData);
-            connectionEvents.close();
-        };
-    }, [handleConnectionData]);
-
-
     const getConnectionList = useCallback(async () => {
         const connectionList = await fetch(`http://localhost:8888/api/v1/next-gen/connection-list`);
-        
+
         const { data } = await connectionList.json();
-    
+
 
         if (data?.nodes.length > 0) {
-            
+
             // setBleDevices((prev) => {
             //     return prev.map((d) => {
             //         if (d.macAddress === d.bdaddrs?.bdaddr) {
@@ -502,22 +491,21 @@ export const ScanPageTable = () => {
             //     });
             // });
 
-            setConnectedDevice(
-                data.nodes.map((d) => {
-                    return { data: { ...d }, macAddress: d.bdaddrs.bdaddr };
-                })
-            );
+            // setConnectedDevice(
+            //     data.nodes.map((d) => {
+            //         console.log(d);
+            //         return { data: { ...d }, macAddress: d.bdaddrs.bdaddr };
+            //     })
+            // );
         }
     }, []);
 
 
-    useEffect(() => {
-        getConnectionList();
-    }, [])
+    // useEffect(() => {
+    //     getConnectionList();
+    // }, [])
 
-    useEffect(() => {
-        console.log(connectedDevices, 'ConnectedDevices')
-    }, [connectedDevices]);
+
 
     const connectOne = useCallback((macAddress) => {
         fetch(" http://localhost:8888/api/v1/next-gen/login", {
@@ -767,7 +755,7 @@ export const ScanPageTable = () => {
     const handleChange = (value) => {
         setSelectedFirmware(value);
     };
-    
+
 
 
     const upgrade = useCallback(() => {
@@ -776,10 +764,9 @@ export const ScanPageTable = () => {
 
         let firmware = selectedFirmware;
 
-        if(!firmware[0].includes('.cyacd'))
-            {
-                firmware = firmwareOptions.find(d => d.key === selectedFirmware[0]).children.map(x => x.key);
-            }
+        if (!firmware[0].includes('.cyacd')) {
+            firmware = firmwareOptions.find(d => d.key === selectedFirmware[0]).children.map(x => x.key);
+        }
 
 
         fetch(" http://localhost:8888/api/v1/next-gen/upgrade", {
@@ -997,6 +984,8 @@ export const ScanPageTable = () => {
             key: "states",
 
             render: (_, record) => {
+
+
                 return (
                     <>
                         <div style={{ display: "flex", flexDirection: "row" }}>
@@ -1188,11 +1177,11 @@ export const ScanPageTable = () => {
 
                     <div>
                         <div style={{ display: 'flex', columnGap: 20 }}>
-                            
-                            <TreeSelect 
-                            {...tProps}
-                            
-                            disabled={!isUpgradeAvailable} />
+
+                            <TreeSelect
+                                {...tProps}
+
+                                disabled={!isUpgradeAvailable} />
 
                             <Button
                                 onClick={() => upgrade()}
